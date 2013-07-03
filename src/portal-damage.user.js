@@ -4,8 +4,8 @@
 // @category       Layer
 // @version        0.1.0.@@DATETIMEVERSION@@-alpha1
 // @namespace      https://github.com/jonatkins/ingress-intel-total-conversion
-// @updateURL      @@UPDATEURL@@
-// @downloadURL    @@DOWNLOADURL@@
+// @updateURL      https://github.com/usefulthink/iitc-portal-damage/raw/master/build/portal-damage.meta.js
+// @downloadURL    https://github.com/usefulthink/iitc-portal-damage/raw/master/build/portal-damage.user.js
 // @description    [@@BUILDDATE@@] Visualizes Portal-Damage (zap-range, -intensity and mitigation)
 // @include        https://www.ingress.com/intel*
 // @include        http://www.ingress.com/intel*
