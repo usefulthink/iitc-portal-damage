@@ -2,11 +2,11 @@
 // @id             iitc-portal-damage@usefluthink
 // @name           IITC plugin: Portal-Damage
 // @category       Layer
-// @version        0.1.0.20130703.92903-rc1
+// @version        0.1.1.20130801.105515-alpha1
 // @namespace      https://github.com/jonatkins/ingress-intel-total-conversion
 // @updateURL      https://github.com/usefulthink/iitc-portal-damage/raw/master/build/portal-damage.meta.js
 // @downloadURL    https://github.com/usefulthink/iitc-portal-damage/raw/master/build/portal-damage.user.js
-// @description    [2013-07-03-092903] Allows you to draw things into the current map so you may plan your next move
+// @description    [2013-08-01-105515] Visualizes Portal-Damage (zap-range, -intensity and mitigation)
 // @include        https://www.ingress.com/intel*
 // @include        http://www.ingress.com/intel*
 // @match          https://www.ingress.com/intel*
@@ -30,6 +30,9 @@ var _plugin = window.plugin.portalDamage = function() {};
 var resLayerGroup = null,
     enlLayerGroup = null;
 
+
+// ------ INTIALIZATION
+
 _plugin.boot = function() {
     resLayerGroup = _plugin.resLayerGroup = new L.FeatureGroup();
     enlLayerGroup = _plugin.enlLayerGroup = new L.FeatureGroup();
@@ -41,7 +44,7 @@ _plugin.boot = function() {
 
 
 
-
+// ------ PLUGIN EVENT-BINDINGS
 
 // portalDataLoaded: callback is passed the argument of
 //              {portals : [portal, portal, ...]} where "portal" is the
@@ -82,10 +85,11 @@ window.addHook('portalAdded', function(data) {
         mitigation = portalDetails.defenseValue,
         hue, opacityFactor;
 
-    var d = portalDetails.zapDamage, dSq = d*d;
+
     // color- (hue) and opacity-mapping by damage (curve-fitting by http://zunzun.com/)
-    hue = Math.min(50, Math.max(0, 49.2 - 0.0654*d + 2.2e-5*dSq));
-    opacityFactor = Math.min(1, Math.max(0, 2.75e-02 + 1.755e-03*d - 7.5e-07*dSq));
+    var d = portalDetails.zapDamage, dSq = d*d;
+    hue = Math.min(50, Math.max(0, 49.2 - 6.54e-2*d + 2.2e-5*dSq));
+    opacityFactor = Math.min(1, Math.max(0, 2.75e-2 + 1.755e-3*d - 7.5e-7*dSq));
 
     // linear alternatives:
     //   hue = 50 - 1/30 * zapDamage;
@@ -98,8 +102,11 @@ window.addHook('portalAdded', function(data) {
         opacity: 0.1+0.2*opacityFactor,
         fillOpacity: 0.12*opacityFactor
     });
-console.log(portal);
-    if(portalDetails.controllingTeam.team == 'ALIENS') {
+
+    // store for later use with the portal
+    portal._damagePath = path;
+
+    if(portalDetails.controllingTeam.team == 'ENLIGHTENED') {
         path.addTo(enlLayerGroup);
     } else if(portalDetails.controllingTeam.team == 'RESISTANCE') {
         path.addTo(resLayerGroup);
@@ -115,7 +122,7 @@ console.log(portal);
 //              code/map_data.js#renderPortal as long as there was an
 //              old portal for the guid.
 window.addHook('beforePortalReRender', function(data) {
-    // check if the corresponding damage-indicator needs to be redrawn
+    // TODO: check if the corresponding damage-indicator needs to be redrawn
 });
 
 
@@ -123,14 +130,14 @@ window.addHook('beforePortalReRender', function(data) {
 //              been (re-)rendered Provides data about the portal that
 //              has been selected.
 window.addHook('portalDetailsUpdated', function(data) {
-    // add defense-values to the sidebar-view
+    // TODO: add defense-values to the sidebar-view
 });
 
 
 
 // ------ INTERNALS
 
-function getZapRange(portal) { return 35+5*Math.floor(portal.level); }
+function getZapRange(portal) { return 35 + 5*Math.floor(portal.level); }
 
 function getZapDamage(portal) {
     const baseDamages = [0, 75, 125, 175, 238, 300, 400, 500, 600], // by portal level
@@ -139,9 +146,9 @@ function getZapDamage(portal) {
         turretAttackFactors = [1, 1.2, 1.4, 1.6, 1.8]; // attack-boost by number of turrets
 
     var level = Math.floor(portal.level),
-        mods = portal.portalV2.linkedModArray;
+        mods = portal.portalV2.linkedModArray,
 
-    var numForceAmps=0, numTurrets=0;
+        numForceAmps=0, numTurrets=0;
 
     for(var i=0; i<4; i++) {
         var mod = mods[i];
@@ -150,34 +157,27 @@ function getZapDamage(portal) {
         if(mod && mod.type === 'FORCE_AMP') { numForceAmps++; }
     }
 
-//    console.log('lvl', level, 'base', baseDamages[level], 'amp', forceAmpDamageFactors[numForceAmps], 'tur', turretAttackFactors[numTurrets]);
     return baseDamages[level] * forceAmpDamageFactors[numForceAmps] * turretAttackFactors[numTurrets];
 }
 
+// defense-calculation adopted from ixotopp: http://goo.gl/9WPMN
 function getDefenseValue(portal) {
     var mods = portal.portalV2.linkedModArray,
-        numLinks = portal.portalV2.linkedEdges.length;
+        numLinks = portal.portalV2.linkedEdges.length,
 
-    // calculations are according to ixotopp: http://goo.gl/9WPMN
+        linkMitigation, shieldMitigation;
 
     // 'best-fit' approximation based on data from the chart published by Brandon Badger
-    var linkMitigation = Math.max(0, 18.6356 * Math.log(2.42032 * numLinks) / 100);
+    linkMitigation = Math.max(0, 18.6356 * Math.log(2.42032 * numLinks) / 100);
 
     // looks sound, don't have any idea how this came together…
-    var shieldMitigation, shieldStr = '', tmp = 1;
+    var tmp = 1;
     for(var i=0; i<4; i++) {
         var mod = mods[i];
 
-        if(mod && mod.type === 'RES_SHIELD') {
-            shieldStr += mod.rarity.charAt(0);
-            tmp *= 1-(mod.stats.MITIGATION/100)
-        }
+        if(mod && mod.type === 'RES_SHIELD') { tmp *= 1-(mod.stats.MITIGATION/100); }
     }
     shieldMitigation = 1-tmp;
-
-//    console.log('mitigation: %.2f [shields (%s) – %.2f, %d links – %.2f]',
-//        shieldMitigation+linkMitigation, shieldStr||'none', shieldMitigation,
-//        numLinks, linkMitigation);
 
     return shieldMitigation + linkMitigation;
 }
@@ -201,4 +201,5 @@ if(window.iitcLoaded && typeof setup === 'function') {
 var script = document.createElement('script');
 script.appendChild(document.createTextNode('('+ wrapper +')();'));
 (document.body || document.head || document.documentElement).appendChild(script);
+
 

@@ -2,7 +2,7 @@
 // @id             iitc-portal-damage@usefluthink
 // @name           IITC plugin: Portal-Damage
 // @category       Layer
-// @version        0.1.0.@@DATETIMEVERSION@@-alpha1
+// @version        0.1.1.@@DATETIMEVERSION@@-alpha1
 // @namespace      https://github.com/jonatkins/ingress-intel-total-conversion
 // @updateURL      https://github.com/usefulthink/iitc-portal-damage/raw/master/build/portal-damage.meta.js
 // @downloadURL    https://github.com/usefulthink/iitc-portal-damage/raw/master/build/portal-damage.user.js
@@ -101,7 +101,7 @@ window.addHook('portalAdded', function(data) {
     // store for later use with the portal
     portal._damagePath = path;
 
-    if(portalDetails.controllingTeam.team == 'ALIENS') {
+    if(portalDetails.controllingTeam.team == 'ENLIGHTENED') {
         path.addTo(enlLayerGroup);
     } else if(portalDetails.controllingTeam.team == 'RESISTANCE') {
         path.addTo(resLayerGroup);
